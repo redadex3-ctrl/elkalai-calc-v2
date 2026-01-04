@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculateur d'Algèbre Relationnelle (Style RelaX)</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>EL KALAI CALCULATOR</h1>
+        <div class="subtitle">Calculateur d'Algèbre Relationnelle</div>
+    </div>
+</header>
+
+<main>
+    <!-- Sidebar: Liste des Relations -->
+    <aside>
+        <div class="panel-header">Relations Disponibles</div>
+        <div style="padding: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn primary" style="flex: 1;" onclick="openAddTableModal()">+ Ajouter</button>
+            <button class="btn" style="flex: 1;" onclick="openExamplesModal()">📋 Exemples</button>
+        </div>
+        <ul class="schema-list" id="schema-list">
+            <!-- Rempli par JS -->
+        </ul>
+        
+        <!-- Section Historique -->
+        <div class="history-section">
+            <div class="panel-header">Historique des Calculs</div>
+            <ul class="history-list" id="history-list">
+                <!-- Rempli par JS -->
+            </ul>
+            <div class="history-controls">
+                <button class="btn" onclick="clearHistory()">Effacer</button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Zone Principale -->
+    <div class="workspace">
+        
+        <!-- Section Requête -->
+        <section class="query-section">
+            <div class="toolbar">
+                <span style="font-size:0.8rem; font-weight:bold; color:#64748b; margin-right:auto;">Opérateurs :</span>
+                <button class="btn btn-op" onclick="insertSymbol('σ[condition](rel)')">Sélection (σ)</button>
+                <button class="btn btn-op" onclick="insertSymbol('π[a,b](rel)')">Projection (π)</button>
+                <button class="btn btn-op" onclick="insertSymbol('R1 ⨝ R2')">Jointure (⨝)</button>
+                <button class="btn btn-op" onclick="insertSymbol('R1 ∪ R2')">Union (∪)</button>
+                <button class="btn btn-op" onclick="insertSymbol('R1 - R2')">Différence (-)</button>
+                <button class="btn btn-op" onclick="insertSymbol('ρ[nom](rel)')">Renommer (ρ)</button>
+                <button class="btn primary" onclick="runQuery()">Exécuter</button>
+                <button class="btn" onclick="clearInput()">Effacer</button>
+                <button class="btn" id="toggleBuilderBtn" onclick="toggleBuilder()" style="margin-left:1rem; font-size:0.75rem;">🔨 Constructeur</button>
+            </div>
+            <div class="editor-container">
+                <textarea id="query-input" placeholder="Tapez votre requête ici... Ex: π[nom, note](σ[age > 20](Etudiant))" spellcheck="false"></textarea>
+            </div>
+            
+            <!-- Constructeur visuel par drag-and-drop -->
+            <div id="builderPanel" class="builder-panel" style="display:none; padding:1rem; border-top:1px solid var(--border-color); background-color:#f8fafc;">
+                <div class="builder-content">
+                    <div class="builder-column">
+                        <div class="builder-title">Relations Disponibles</div>
+                        <div id="builderRelations" class="builder-relations">
+                            <!-- Rempli dynamiquement par JS -->
+                        </div>
+                    </div>
+                    <div class="builder-column">
+                        <div class="builder-title">Espace de Travail</div>
+                        <div id="builderWorkspace" class="builder-workspace" ondrop="dropInWorkspace(event)" ondragover="allowDrop(event)">
+                            <div style="color:#94a3b8; text-align:center; padding:1rem;">Glissez une relation ici</div>
+                        </div>
+                    </div>
+                    <div class="builder-column">
+                        <div class="builder-title">Opérateurs</div>
+                        <div class="builder-operators">
+                            <div class="operator-item" draggable="true" ondragstart="dragOperator(event)" data-op="σ">Sélection (σ)</div>
+                            <div class="operator-item" draggable="true" ondragstart="dragOperator(event)" data-op="π">Projection (π)</div>
+                            <div class="operator-item" draggable="true" ondragstart="dragOperator(event)" data-op="⨝">Jointure (⨝)</div>
+                            <div class="operator-item" draggable="true" ondragstart="dragOperator(event)" data-op="∪">Union (∪)</div>
+                            <div class="operator-item" draggable="true" ondragstart="dragOperator(event)" data-op="-">Différence (-)</div>
+                            <div class="operator-item" draggable="true" ondragstart="dragOperator(event)" data-op="ρ">Renommer (ρ)</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top:1rem; display:flex; gap:0.5rem;">
+                    <button class="btn primary" onclick="buildQueryFromBuilder()">Générer Requête</button>
+                    <button class="btn" onclick="clearBuilder()">Réinitialiser</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section Résultat -->
+        <section class="result-section">
+            <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>Résultat</span>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <span id="result-count" style="font-weight:normal; font-size:0.8em;"></span>
+                    <button class="btn" id="exportCSV" onclick="exportToCSV()" style="font-size:0.75rem;">📥 CSV</button>
+                    <button class="btn" id="exportJSON" onclick="exportToJSON()" style="font-size:0.75rem;">📥 JSON</button>
+                </div>
+            </div>
+            <div class="result-content" id="result-output">
+                <div class="empty-state">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:10px;">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="3" y1="9" x2="21" y2="9"></line>
+                        <line x1="9" y1="21" x2="9" y2="9"></line>
+                    </svg>
+                    <p>Aucun résultat à afficher.</p>
+                    <p style="font-size:0.85rem;">Sélectionnez une relation ou tapez une requête.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+
+<!-- Modal: Ajouter Relation -->
+<div id="addTableModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">Créer une nouvelle relation</div>
+        <div class="form-group">
+            <label>Nom de la relation :</label>
+            <input type="text" id="tableName" placeholder="Ex: Professeur">
+        </div>
+        <div class="form-group">
+            <label>Colonnes (séparées par des virgules) :</label>
+            <input type="text" id="tableColumns" placeholder="Ex: id, nom, email, telephone">
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeModal('addTableModal')">Annuler</button>
+            <button class="btn primary" onclick="createTable()">Créer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Ajouter Tuple -->
+<div id="addTupleModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">Ajouter un tuple à <span id="addTupleTableName"></span></div>
+        <div id="addTupleForm"></div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeModal('addTupleModal')">Annuler</button>
+            <button class="btn primary" onclick="saveTuple()">Ajouter</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Modifier Tuple -->
+<div id="editTupleModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">Modifier un tuple de <span id="editTupleTableName"></span></div>
+        <div id="editTupleForm"></div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeModal('editTupleModal')">Annuler</button>
+            <button class="btn primary" onclick="updateTuple()">Modifier</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Exemples -->
+<div id="examplesModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">Exemples de Relations</div>
+        <div id="examplesContent"></div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeModal('examplesModal')">Fermer</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- Scripts du projet -->
+<script src="js/data.js"></script>
+<script src="js/operations.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
